@@ -28,6 +28,8 @@ public class UserController {
   @PostMapping("/signup")
   public ResponseEntity<ApiResponse<UserResponseDto>> createUser(
       @Valid @RequestBody UserCreateRequestDto dto) {
+    this.userService.checkRegisteredUser(dto.getEmail());
+
     UserResponseDto userResponseDto =
         this.userService.createUser(dto.getUsername(), dto.getPassword(), dto.getEmail());
 

@@ -2,6 +2,7 @@ package org.example.practice_refactor_todo.user.service;
 
 import jakarta.transaction.Transactional;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.practice_refactor_todo.common.config.PasswordEncoder;
 import org.example.practice_refactor_todo.common.entity.User;
@@ -21,6 +22,21 @@ public class UserService {
   private final TodoRepository todoRepository;
   private final ReplyRepository replyRepository;
   private final PasswordEncoder passwordEncoder;
+
+  /**
+   * 등록된 사용자인지 확인
+   *
+   * @param email 이메일
+   */
+  public void checkRegisteredUser(String email) {
+    User foundUser = this.userRepository.findByEmail(email).orElse(null);
+
+    if (Objects.isNull(foundUser)) {
+      return;
+    }
+
+    throw new CustomException(HttpStatus.BAD_REQUEST, "이미 등록된 이메일입니다. email : " + email);
+  }
 
   /**
    * 사용자 생성
@@ -55,7 +71,9 @@ public class UserService {
    * @return 조회된 사용자 정보
    */
   public UserResponseDto findById(Long id) {
-    User findUser = this.userRepository.findByIdElseOrThrow(id);
+    this.isExistUserById(id);
+    User findUser = this.userRepository.findById(id).get();
+
     return UserResponseDto.toDto(findUser);
   }
 
@@ -70,7 +88,8 @@ public class UserService {
    */
   @Transactional
   public UserResponseDto updateUser(Long id, String username, String password, String email) {
-    User findUser = this.userRepository.findByIdElseOrThrow(id);
+    this.isExistUserById(id);
+    User findUser = this.userRepository.findById(id).get();
 
     String encodedPassword = this.passwordEncoder.encode(password);
     findUser.updateUser(username, encodedPassword, email);
@@ -85,12 +104,14 @@ public class UserService {
    */
   @Transactional
   public void deleteUser(Long id) {
+    this.isExistUserById(id);
+
     // 사용자가 작성한 모든 댓글 삭제
     this.replyRepository.deleteAllByUserId(id);
     // 사용자가 작성한 모든 일정 삭제
     this.todoRepository.deleteAllByUserId(id);
 
-    User findUser = this.userRepository.findByIdElseOrThrow(id);
+    User findUser = this.userRepository.findById(id).get();
     this.userRepository.delete(findUser);
   }
 
@@ -102,7 +123,9 @@ public class UserService {
    * @return 조회된 사용자 정보
    */
   public UserResponseDto validLoginUserInfo(String password, String email) {
-    User findUser = this.userRepository.findByEmailElseOrThrow(email);
+    this.isExistUserByEmail(email);
+
+    User findUser = this.userRepository.findByEmail(email).get();
     boolean isMatchesPassword = this.passwordEncoder.matches(password, findUser.getPassword());
 
     if (!isMatchesPassword) {
@@ -110,5 +133,31 @@ public class UserService {
     }
 
     return UserResponseDto.toDto(findUser);
+  }
+
+  /**
+   * 유저가 존재하는지 ID로 확인
+   *
+   * @param id 유저 ID
+   */
+  private void isExistUserById(Long id) {
+    boolean isExist = this.userRepository.existsById(id);
+
+    if (!isExist) {
+      throw new CustomException(HttpStatus.NOT_FOUND, "존재하지 않는 유저 ID 입니다. ID : " + id);
+    }
+  }
+
+  /**
+   * 유저가 존재하는지 이메일로 확인
+   *
+   * @param email 이메일
+   */
+  private void isExistUserByEmail(String email) {
+    boolean isExist = this.userRepository.existsByEmail(email);
+
+    if (!isExist) {
+      throw new CustomException(HttpStatus.UNAUTHORIZED, "존재하지 않는 이메일입니다. Email : " + email);
+    }
   }
 }
