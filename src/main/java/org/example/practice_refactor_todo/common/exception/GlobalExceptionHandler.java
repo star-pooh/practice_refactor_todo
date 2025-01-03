@@ -1,10 +1,12 @@
 package org.example.practice_refactor_todo.common.exception;
 
-import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.example.practice_refactor_todo.common.util.ErrorResponse;
+import org.example.practice_refactor_todo.common.dto.ApiResponse;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -13,50 +15,53 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class GlobalExceptionHandler {
 
   /**
-   * CustomValidationException 처리
+   * CustomException 예외 처리
    *
-   * @param e CustomValidationException
-   * @return 에러 정보
+   * @param e CustomException
+   * @return ErrorResponse
    */
-  @ExceptionHandler(CustomValidationException.class)
-  public ResponseEntity<Map<String, Object>> handleCustomValidationException(
-      CustomValidationException e) {
-    Map<String, Object> response = ErrorResponse.responseFromCustomException(e);
+  @ExceptionHandler(CustomException.class)
+  public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
+    log.info("[{}] {} : {}", e.getStackTrace()[0], e.getHttpStatus(), e.getErrorMessage());
 
-    log.error("[handleCustomValidationException] {} : {} ", e.getHttpStatus(), e.getErrorMessage());
-
-    return ResponseEntity.status(e.getHttpStatus()).body(response);
+    ApiResponse<Void> errorResponse =
+        ApiResponse.error(HttpStatus.BAD_REQUEST, e.getErrorMessage());
+    return ResponseEntity.status(e.getHttpStatus()).body(errorResponse);
   }
 
   /**
-   * CustomRepositoryException 처리
+   * RequestBody Validation 예외 처리
    *
-   * @param e CustomRepositoryException
-   * @return 에러 정보
+   * @param e MethodArgumentNotValidException
+   * @return ErrorResponse
    */
-  @ExceptionHandler(CustomRepositoryException.class)
-  public ResponseEntity<Map<String, Object>> handleCustomRepositoryException(
-      CustomRepositoryException e) {
-    Map<String, Object> response = ErrorResponse.responseFromCustomException(e);
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(
+      MethodArgumentNotValidException e) {
+    String errorMessage =
+        e.getBindingResult().getFieldErrors().stream()
+            .map(DefaultMessageSourceResolvable::getDefaultMessage)
+            .collect(Collectors.joining("\n"));
 
-    log.error("[handleCustomRepositoryException] {} : {} ", e.getHttpStatus(), e.getErrorMessage());
+    log.info("[{}] {} : {}", e.getStackTrace()[0], HttpStatus.BAD_REQUEST, errorMessage);
 
-    return ResponseEntity.status(e.getHttpStatus()).body(response);
+    ApiResponse<Void> errorResponse = ApiResponse.error(HttpStatus.BAD_REQUEST, errorMessage);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
   }
 
   /**
-   * Exception 처리
+   * Exception 예외 처리
    *
    * @param e Exception
-   * @return 에러 정보
+   * @return ErrorResponse
    */
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<Map<String, Object>> handleException(Exception e) {
-    Map<String, Object> response =
-        ErrorResponse.responseFromException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+  public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception e) {
+    log.error(
+        "[{}] {} : {}", e.getStackTrace()[0], HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
 
-    log.error("[handleException] {} : {} ", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    ApiResponse<Void> errorResponse =
+        ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
   }
 }

@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.practice_refactor_todo.common.config.PasswordEncoder;
 import org.example.practice_refactor_todo.common.entity.User;
-import org.example.practice_refactor_todo.common.exception.CustomRepositoryException;
+import org.example.practice_refactor_todo.common.exception.CustomException;
 import org.example.practice_refactor_todo.reply.repository.ReplyRepository;
 import org.example.practice_refactor_todo.todo.repository.TodoRepository;
 import org.example.practice_refactor_todo.user.dto.UserResponseDto;
@@ -106,7 +106,7 @@ public class UserService {
     boolean isMatchesPassword = this.passwordEncoder.matches(password, findUser.getPassword());
 
     if (!isMatchesPassword) {
-      throw new CustomRepositoryException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
+      throw new CustomException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
     }
 
     return UserResponseDto.toDto(findUser);

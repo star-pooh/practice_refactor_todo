@@ -7,7 +7,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.example.practice_refactor_todo.common.util.ErrorResponse;
+import org.example.practice_refactor_todo.common.exception.FilterException;
 import org.springframework.util.PatternMatchUtils;
 
 @Slf4j
@@ -30,7 +30,7 @@ public class LoginFilter implements Filter {
 
       if (Objects.isNull(session) || Objects.isNull(session.getAttribute("loginUser"))) {
         log.info("[LoginFilter] 로그인 실패");
-        ErrorResponse.responseFromLoginFilter(httpServletResponse);
+        FilterException.ofUnauthorizedException(httpServletResponse);
         return;
       }
     }
